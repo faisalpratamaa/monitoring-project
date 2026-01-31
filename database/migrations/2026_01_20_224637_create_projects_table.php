@@ -11,9 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('projects', function (Blueprint $table) {
+        Schema::create('master_projects', function (Blueprint $table) {
             $table->id();
+            $table->string('kode')->unique();
             $table->string('name');
+            $table->foreignId('kategori_id')->constrained('master_kategoris');
+            $table->integer('bobot')->default(0);
+            $table->string('target');
+            $table->integer('anggaran');
+            $table->enum('waktu', ['TW 1', 'TW 2', 'TW 3', 'TW 4']);
+            $table->enum('tipe', ['New', 'Carry Over']);
+            $table->string('pic');
+            $table->string('hp');
+            $table->string('email');
             $table->timestamps();
         });
     }
@@ -23,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('projects');
+        Schema::dropIfExists('master_projects');
     }
 };

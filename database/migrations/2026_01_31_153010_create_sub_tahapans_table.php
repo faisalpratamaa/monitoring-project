@@ -11,11 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('tahapans', function (Blueprint $table) {
+        Schema::create('sub_tahapans', function (Blueprint $table) {
             $table->id();
-            $table->string('kode')->unique();
-            $table->foreignId('kategori_id')->constrained('master_kategoris');
+            $table->integer('kode')->unique();
+            $table->foreignId('tahapan_id')->constrained('tahapans');
+            $table->foreignId('project_id')->constrained('master_projects');
             $table->string('name');
+            $table->integer('bobot');
+            $table->integer('progres')->default(0);
+            $table->integer('nilai');
             $table->timestamps();
         });
     }
@@ -25,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('tahapans');
+        Schema::dropIfExists('sub_tahapans');
     }
 };
