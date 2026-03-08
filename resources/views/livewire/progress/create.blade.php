@@ -39,7 +39,6 @@ new class extends Component {
     public function mount(): void
     {
         $this->tanggal = now()->format('Y-m-d\TH:i');
-        $this->user_id = auth()->user()->id;
     }
 
     public function save(): void
