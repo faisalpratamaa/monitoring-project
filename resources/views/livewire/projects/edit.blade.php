@@ -3,6 +3,7 @@
 use Livewire\Volt\Component;
 use App\Models\Project;
 use App\Models\Tahapan;
+use App\Models\DetailProject;
 use Mary\Traits\Toast;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Rule;
@@ -10,154 +11,235 @@ use Livewire\Attributes\Rule;
 new class extends Component {
     use Toast, WithFileUploads;
 
+    // Parameter dari route
     public Project $project;
 
     #[Rule('required')]
     public string $name = '';
 
     #[Rule('required')]
-    public array $tahapan = [];
+    public string $kode = '';
 
+    #[Rule('required')]
+    public int $kategori_id = 0;
+
+    #[Rule('required')]
+    public string $target = '';
+
+    #[Rule('required')]
+    public int $anggaran = 0;
+
+    #[Rule('required')]
+    public string $waktu = '';
+
+    #[Rule('required')]
+    public string $tipe = '';
+
+    #[Rule('required')]
+    public string $pic = '';
+
+    #[Rule('required')]
+    public string $no_hp = '';
+
+    #[Rule('required|email')]
+    public string $email = '';
+
+    public array $tahapans = [];
+
+    public array $waktu_options = [
+        ['id' => 'TW 1', 'name' => 'TW 1'],
+        ['id' => 'TW 2', 'name' => 'TW 2'],
+        ['id' => 'TW 3', 'name' => 'TW 3'],
+        ['id' => 'TW 4', 'name' => 'TW 4'],
+    ];
+
+    public array $tipe_options = [
+        ['id' => 'New', 'name' => 'New'],
+        ['id' => 'Carry Over', 'name' => 'Carry Over'],
+    ];
+
+    /**
+     * MOUNT (LOAD DATA PROJECT)
+     */
     public function mount(Project $project): void
     {
         $this->project = $project;
-        $this->name = $project->name;
 
-        $this->tahapan = $project->tahapans->map(fn($t) => [
-            'id' => $t->id,
-            'name' => $t->name,
-            'bobot' => $t->bobot,
-        ])->toArray();
+        $this->name = $project->name;
+        $this->kode = $project->kode;
+        $this->kategori_id = $project->kategori_id;
+        $this->target = $project->target;
+        $this->anggaran = $project->anggaran;
+        $this->waktu = $project->waktu;
+        $this->tipe = $project->tipe;
+        $this->pic = $project->pic;
+        $this->no_hp = $project->no_hp;
+        $this->email = $project->email;
+
+        // Load detail tahapan
+        $this->tahapans = $project->detailProjects()
+            ->with('tahapan')
+            ->get()
+            ->map(fn($item) => [
+                'id' => $item->tahapan_id,
+                'tahapan' => $item->tahapan->name,
+                'bobot' => $item->bobot,
+                'nilai' => $item->nilai,
+            ])
+            ->toArray();
     }
 
-    public function update(): void
+    /**
+     * SAVE (UPDATE)
+     */
+    public function save(): void
     {
         $this->validate([
             'name' => 'required',
-            'tahapan' => 'required|array|min:1',
-            'tahapan.*.name' => 'required',
-            'tahapan.*.bobot' => 'required|numeric|min:1',
+            'kode' => 'required|unique:master_projects,kode,' . $this->project->id,
+            'kategori_id' => 'required',
+            'target' => 'required',
+            'anggaran' => 'required|numeric',
+            'waktu' => 'required',
+            'tipe' => 'required',
+            'pic' => 'required',
+            'no_hp' => 'required',
+            'email' => 'required|email',
+
+            'tahapans' => 'required|array|min:1',
+            'tahapans.*.id' => 'required|exists:tahapans,id',
+            'tahapans.*.bobot' => 'required|numeric',
+            'tahapans.*.nilai' => 'required|numeric',
         ]);
-
-        $jumlah = collect($this->tahapan)->sum('bobot');
-
-        if ($jumlah > 100) {
-            $this->error('Jumlah bobot tidak boleh lebih dari 100.');
-            return;
-        }
 
         // Update project
         $this->project->update([
             'name' => $this->name,
+            'kode' => $this->kode,
+            'kategori_id' => $this->kategori_id,
+            'target' => $this->target,
+            'anggaran' => $this->anggaran,
+            'waktu' => $this->waktu,
+            'tipe' => $this->tipe,
+            'pic' => $this->pic,
+            'no_hp' => $this->no_hp,
+            'email' => $this->email,
         ]);
 
-        // Ambil ID tahapan lama
-        $existingIds = $this->project->tahapans()->pluck('id')->toArray();
-        $currentIds = [];
-
-        foreach ($this->tahapan as $item) {
-            if (isset($item['id'])) {
-                Tahapan::where('id', $item['id'])->update([
-                    'name' => $item['name'],
-                    'bobot' => $item['bobot'],
-                ]);
-                $currentIds[] = $item['id'];
-            } else {
-                $t = Tahapan::create([
+        // Sync detail project
+        foreach ($this->tahapans as $item) {
+            DetailProject::updateOrCreate(
+                [
                     'project_id' => $this->project->id,
-                    'name' => $item['name'],
+                    'tahapan_id' => $item['id'],
+                ],
+                [
                     'bobot' => $item['bobot'],
-                ]);
-                $currentIds[] = $t->id;
-            }
+                    'nilai' => $item['nilai'],
+                ]
+            );
         }
-
-        // Hapus tahapan yang dihapus di form
-        $deletedIds = array_diff($existingIds, $currentIds);
-        Tahapan::whereIn('id', $deletedIds)->delete();
 
         $this->success('Project berhasil diperbarui!', redirectTo: '/projects');
     }
 
-    public function addDetail(): void
+    /**
+     * DATA UNTUK VIEW
+     */
+    public function with(): array
     {
-        $this->tahapan[] = [
-            'name' => null,
-            'bobot' => null,
+        return [
+            'kategori_options' => \App\Models\Kategori::all(),
+            'waktu_options' => $this->waktu_options,
+            'tipe_options' => $this->tipe_options,
         ];
     }
 
-    public function removeDetail(int $index): void
+    /**
+     * JIKA KATEGORI DIGANTI
+     */
+    public function updatedKategoriId($value): void
     {
-        unset($this->tahapan[$index]);
-        $this->tahapan = array_values($this->tahapan);
+        $this->tahapans = [];
+
+        $kategori = Tahapan::where('kategori_id', $value)->get();
+
+        foreach ($kategori as $index => $item) {
+            $this->tahapans[$index]['id'] = $item->id;
+            $this->tahapans[$index]['tahapan'] = $item->name;
+            $this->tahapans[$index]['bobot'] = 0;
+            $this->tahapans[$index]['nilai'] = 0;
+        }
     }
 };
-
 ?>
 
 <div>
     <x-header title="Edit Project" separator />
 
-    <x-form wire:submit="update">
-        {{-- Basic section --}}
-        <x-card>
-            <div class="lg:grid grid-cols-5">
-                <div class="col-span-1">
-                    <x-header title="Basic" subtitle="Edit informasi project" size="text-2xl" />
-                </div>
+    @if ($errors->any())
+    <div class="alert alert-error mb-4">
+        <ul>
+            @foreach ($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
 
-                <div class="col-span-4 grid gap-3">
-                    <x-input label="Nama Project" wire:model="name" />
-                </div>
+    <x-form wire:submit="save">
+        <x-card>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <x-input label="Kode Project" wire:model="kode" readonly />
+                <x-input label="Nama Project" wire:model="name" />
+                <x-select label="Kategori" wire:model.live="kategori_id"
+                    :options="$kategori_options"
+                    option-label="name"
+                    option-value="id" />
+
+                <x-input label="Target (Bulan)" type="month" wire:model="target" />
+                <x-input label="Total Anggaran" wire:model="anggaran" prefix="Rp " money="IDR" />
+                <x-select label="Target (TW)" wire:model="waktu"
+                    :options="$waktu_options"
+                    option-label="name"
+                    option-value="id" />
+
+                <x-select label="Tipe" wire:model="tipe"
+                    :options="$tipe_options"
+                    option-label="name"
+                    option-value="id" />
+
+                <x-input label="PIC" wire:model="pic" />
+                <x-input label="No HP" wire:model="no_hp" />
+                <x-input label="Email" wire:model="email" />
             </div>
         </x-card>
 
-        {{-- Tahapan --}}
+        @if(!empty($tahapans))
         <x-card>
-            <div class="lg:grid grid-cols-5">
-                <div class="col-span-1">
-                    <x-header title="Tahapan Project" subtitle="Edit tahapan project" size="text-2xl" />
-                </div>
+            @foreach ($tahapans as $index => $item)
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                <x-input label="Tahapan"
+                    wire:model="tahapans.{{ $index }}.tahapan"
+                    readonly />
 
-                <div class="col-span-4 space-y-4">
-                    @foreach ($tahapan as $index => $item)
-                    <div class="rounded-xl space-y-3">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <x-input
-                                label="Nama Tahapan"
-                                wire:model="tahapan.{{ $index }}.name" />
-                            <x-input
-                                label="Bobot"
-                                wire:model="tahapan.{{ $index }}.bobot"
-                                type="number" />
-                        </div>
+                <x-input label="Bobot (%)"
+                    type="number"
+                    wire:model="tahapans.{{ $index }}.bobot" />
 
-                        <div class="flex justify-end">
-                            <x-button
-                                wire:click="removeDetail({{ $index }})"
-                                icon="o-trash"
-                                label="Hapus"
-                                class="btn-error btn-sm" />
-                        </div>
-                    </div>
-                    @endforeach
-
-                    <x-button
-                        icon="o-plus"
-                        class="btn-primary"
-                        wire:click="addDetail"
-                        label="Tambah Tahapan" />
-                </div>
+                <x-input label="Nilai"
+                    type="number"
+                    wire:model="tahapans.{{ $index }}.nilai" />
             </div>
+            @endforeach
         </x-card>
+        @endif
 
         <x-slot:actions>
             <x-button label="Cancel" link="/projects" />
-            <x-button
-                label="Update"
-                icon="o-check"
-                spinner="update"
+            <x-button label="Update"
+                icon="o-pencil"
+                spinner="save"
                 type="submit"
                 class="btn-primary" />
         </x-slot:actions>

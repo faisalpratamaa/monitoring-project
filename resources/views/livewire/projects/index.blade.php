@@ -6,24 +6,30 @@ use Mary\Traits\Toast;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\DetailProject;
 
 new class extends Component {
     use Toast;
     use WithPagination;
 
     public string $search = '';
-
     public bool $drawer = false;
 
     public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
-
     public int $filter = 0;
 
-    public $page = [['id' => 10, 'name' => '10'], ['id' => 25, 'name' => '25'], ['id' => 50, 'name' => '50'], ['id' => 100, 'name' => '100']];
+    public $page = [
+        ['id' => 10, 'name' => '10'],
+        ['id' => 25, 'name' => '25'],
+        ['id' => 50, 'name' => '50'],
+        ['id' => 100, 'name' => '100'],
+    ];
 
-    public int $perPage = 10; // Default jumlah data per halaman
+    public int $perPage = 10;
 
-    // Clear filters
+    /* =========================
+     * ACTIONS
+     * ========================= */
     public function clear(): void
     {
         $this->reset();
@@ -31,34 +37,100 @@ new class extends Component {
         $this->success('Filters cleared.', position: 'toast-top');
     }
 
-    // Delete action
     public function delete($id): void
     {
+        $detail_projects = DetailProject::where('project_id', $id)->get();
+        foreach ($detail_projects as $detail_project) {
+            $detail_project->delete();
+        }
         $project = Project::findOrFail($id);
         $project->delete();
-        $this->warning("Project $project->name akan dihapus", position: 'toast-top');
+
+        $this->warning("Project {$project->name} berhasil dihapus", position: 'toast-top');
     }
 
-    // Table headers
+    /* =========================
+     * TABLE HEADERS
+     * ========================= */
     public function headers(): array
     {
-        return [['key' => 'id', 'label' => '#', 'class' => 'w-1'], ['key' => 'name', 'label' => 'Name', 'class' => 'w-64'], ['key' => 'created_at', 'label' => 'Created At', 'class' => 'w-48'], ['key' => 'updated_at', 'label' => 'Updated At', 'class' => 'w-48'], ['key' => 'actions', 'label' => 'Actions', 'class' => 'w-1']];
+        return [
+            ['key' => 'kode', 'label' => 'Kode Project', 'class' => 'w-24'],
+            ['key' => 'name', 'label' => 'Nama Project', 'class' => 'w-64'],
+            ['key' => 'kategori.name', 'label' => 'Kategori', 'class' => 'w-40'],
+            ['key' => 'bobot', 'label' => 'Bobot', 'class' => 'w-20'],
+            ['key' => 'target', 'label' => 'Target', 'class' => 'w-40'],
+            ['key' => 'anggaran', 'label' => 'Anggaran', 'class' => 'w-32', 'format' => ['currency', 0, 'Rp']],
+            ['key' => 'waktu', 'label' => 'Triwulan', 'class' => 'w-24'],
+            ['key' => 'tipe', 'label' => 'Tipe', 'class' => 'w-32'],
+            ['key' => 'pic', 'label' => 'PIC', 'class' => 'w-40'],
+            ['key' => 'no_hp', 'label' => 'No. HP', 'class' => 'w-40'],
+            ['key' => 'email', 'label' => 'Email', 'class' => 'w-48'],
+            ['key' => 'actions', 'label' => 'Actions', 'class' => 'w-1'],
+        ];
     }
 
+    /* =========================
+     * QUERY
+     * ========================= */
     public function projects(): LengthAwarePaginator
     {
-        return Project::query()->when($this->search, fn(Builder $q) => $q->where('name', 'like', "%$this->search%"))->orderBy(...array_values($this->sortBy))->paginate($this->perPage);
+        return Project::query()
+            ->with('kategori')
+            ->when(
+                $this->search,
+                fn(Builder $q) =>
+                $q->where('name', 'like', "%{$this->search}%")
+            )
+            ->orderBy(...array_values($this->sortBy))
+            ->paginate($this->perPage)
+            ->through(function ($project) {
+                $project->target = $this->formatTarget($project->target);
+                return $project;
+            });
     }
 
+    /* =========================
+     * FORMAT TARGET
+     * ========================= */
+    private function formatTarget(string $target): string
+    {
+        // Jika sudah format "YYYY NamaBulan" (contoh: 2026 Agustus)
+        if (preg_match('/^\d{4}\s[A-Za-z]+$/', $target)) {
+            return $target;
+        }
+
+        // Jika format "YYYY-MM"
+        if (preg_match('/^\d{4}-\d{2}$/', $target)) {
+            [$tahun, $bulan] = explode('-', $target);
+
+            $bulanMap = [
+                '01' => 'Januari',
+                '02' => 'Februari',
+                '03' => 'Maret',
+                '04' => 'April',
+                '05' => 'Mei',
+                '06' => 'Juni',
+                '07' => 'Juli',
+                '08' => 'Agustus',
+                '09' => 'September',
+                '10' => 'Oktober',
+                '11' => 'November',
+                '12' => 'Desember',
+            ];
+
+            return $tahun . ' ' . ($bulanMap[$bulan] ?? '');
+        }
+
+        // Fallback (biar tidak error)
+        return $target;
+    }
+
+    /* =========================
+     * WITH
+     * ========================= */
     public function with(): array
     {
-        if ($this->filter >= 0 && $this->filter < 2) {
-            if (!$this->search == null) {
-                $this->filter = 1;
-            } else {
-                $this->filter = 0;
-            }
-        }
         return [
             'projects' => $this->projects(),
             'headers' => $this->headers(),
@@ -67,10 +139,12 @@ new class extends Component {
         ];
     }
 
-    // Reset pagination when any component property changes
+    /* =========================
+     * RESET PAGINATION
+     * ========================= */
     public function updated($property): void
     {
-        if (!is_array($property) && $property != '') {
+        if (!is_array($property) && $property !== '') {
             $this->resetPage();
         }
     }

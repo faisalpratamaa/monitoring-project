@@ -16,7 +16,7 @@ Route::get('/logout', function () {
     return redirect('/');
 });
 
-Route::middleware('auth')->group(function() {
+Route::middleware('auth')->group(function () {
     Volt::route('/', 'index');
     Volt::route('/profile', 'auth/profile');
 
@@ -29,13 +29,20 @@ Route::middleware('auth')->group(function() {
     });
 
     Route::middleware('role:1,2')->group(function () {
+        Volt::route('/kategoris', 'kategoris.index');
+
         Volt::route('/projects', 'projects.index');
         Volt::route('/projects/create', 'projects.create');
         Volt::route('/projects/{project}/edit', 'projects.edit');
 
         Volt::route('/tahapans', 'tahapans.index');
         Volt::route('/tahapans/create', 'tahapans.create');
-        Volt::route('/tahapans/{tahapan}/edit', 'tahapans.edit');
+        Volt::route('/tahapans/{kategori}/edit', 'tahapans.edit');
+        Volt::route('/tahapans/{kategori}/detail', 'tahapans.detail');
+
+        Volt::route('/progress', 'progress.index');
+        Volt::route('/progress/create', 'progress.create');
+        Volt::route('/progress/{progres}/edit', 'progress.edit');
+        Volt::route('/progress/{progres}/detail', 'progress.detail');
     });
 });
-

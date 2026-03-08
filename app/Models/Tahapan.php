@@ -6,17 +6,21 @@ use Illuminate\Database\Eloquent\Model;
 
 class Tahapan extends Model
 {
-    protected $fillable = [
-        'name',
-        'bobot',
-        'project_id',
-        'progress',
-        'nilai',
-        'file',
-    ];
+    protected $table = 'tahapans';
+    protected $fillable = ['kode', 'kategori_id', 'name'];
 
-    public function projects()
+    public function kategori()
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Kategori::class);
+    }
+
+    public function detailProjects()
+    {
+        return $this->hasMany(DetailProject::class);
+    }
+
+    public function subTahapans()
+    {
+        return $this->hasMany(SubTahapan::class);
     }
 }

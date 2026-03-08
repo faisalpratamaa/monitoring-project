@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('progres', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('sub_tahapan_id')->constrained('sub_tahapans');
+            $table->foreignId('detail_project_id')->constrained('detail_projects');
             $table->date('tanggal');
             $table->foreignId('user_id')->constrained('users');
             $table->string('file')->nullable();

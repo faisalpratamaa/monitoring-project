@@ -84,6 +84,13 @@ class TahapanSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'kode' => 'THP011',
+                'kategori_id' => 2,
+                'name' => 'Go Live',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
     }
 }

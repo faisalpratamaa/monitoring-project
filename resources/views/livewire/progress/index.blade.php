@@ -10,6 +10,9 @@ use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 use App\Models\Kategori;
 use App\Models\Tahapan;
+use App\Models\Progres;
+use App\Models\Project;
+use App\Models\User;
 
 new class extends Component {
     use Toast;
@@ -61,13 +64,13 @@ new class extends Component {
 
     public function headers(): array
     {
-        return [['key' => 'name', 'label' => 'Nama Kategori', 'class' => 'w-36'], ['key' => 'tahapans_count', 'label' => 'Jumlah Tahapan', 'class' => 'w-36'], ['key' => 'actions', 'label' => 'Actions', 'class' => 'w-1'],];
+        return [['key' => 'kode', 'label' => 'Kode', 'class' => 'w-8'], ['key' => 'kategori.name', 'label' => 'Nama Kategori', 'class' => 'w-36'], ['key' => 'project.name', 'label' => 'Nama Project', 'class' => 'w-36'], ['key' => 'tahapans.name', 'label' => 'Nama Tahapan', 'class' => 'w-36'], ['key' => 'tanggal', 'label' => 'Tanggal', 'class' => 'w-36'], ['key' => 'user.name', 'label' => 'Nama User', 'class' => 'w-36'], ['key' => 'nilai', 'label' => 'Nilai', 'class' => 'w-36'], ['key' => 'actions', 'label' => 'Actions', 'class' => 'w-1'],];
     }
 
-    public function tahapan(): LengthAwarePaginator
+    public function progress(): LengthAwarePaginator
     {
-        return Kategori::query()
-            ->withCount('tahapans')
+        return Progres::query()
+            ->with(['tahapans.kategori', 'tahapans.project', 'tahapans', 'users'])
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -81,7 +84,7 @@ new class extends Component {
             }
         }
         return [
-            'tahapan' => $this->tahapan(),
+            'progress' => $this->progress(),
             'headers' => $this->headers(),
             'perPage' => $this->perPage,
             'pages' => $this->page,
@@ -99,10 +102,10 @@ new class extends Component {
 ?>
 
 <div class="p-4 space-y-6">
-    <x-header title="Detail Tahapan" separator progress-indicator>
+    <x-header title="Detail Progress" separator progress-indicator>
         <x-slot:actions>
             <div class="flex flex-row sm:flex-row gap-2">
-                <x-button label="Create" link="/tahapans/create" responsive icon="o-plus" class="btn-primary" />
+                <x-button label="Create" link="/progress/create" responsive icon="o-plus" class="btn-primary" />
             </div>
         </x-slot:actions>
     </x-header>
@@ -122,16 +125,13 @@ new class extends Component {
 
     <!-- TABLE -->
     <x-card class="overflow-x-auto">
-        <x-table :headers="$headers" :rows="$tahapan" :sort-by="$sortBy" with-pagination
-            link="tahapans/{id}/detail?kategori={name}">
-            @scope('cell_tahapans_count', $tahapan)
-            <span class="font-medium">{{ $tahapan->tahapans_count }}</span>
-            @endscope
+        <x-table :headers="$headers" :rows="$progress" :sort-by="$sortBy" with-pagination
+            link="progress/{id}/detail?kategori={name}">
 
-            @scope('cell_actions', $tahapan)
+            @scope('cell_actions', $progress)
             <div class="flex">
                 <x-button icon="o-pencil"
-                    link="/tahapans/{{ $tahapan->id }}/edit?kategori={{ $tahapan->name }}"
+                    link="/progress/{{ $progress->id }}/edit?kategori={{ $progress->tahapans->kategori->name }}"
                     class="btn-ghost btn-sm text-yellow-500" />
             </div>
             @endscope
@@ -141,7 +141,7 @@ new class extends Component {
     <x-drawer wire:model="drawer" title="Filters" right separator with-close-button
         class="w-full sm:w-[90%] md:w-1/2 lg:w-1/3">
         <div class="grid gap-5">
-            <x-input placeholder="Cari Kategori..." wire:model.live.debounce="search" clearable
+            <x-input placeholder="Cari Invoice..." wire:model.live.debounce="search" clearable
                 icon="o-magnifying-glass" />
         </div>
 

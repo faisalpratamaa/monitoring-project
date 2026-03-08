@@ -6,10 +6,21 @@ use Illuminate\Database\Eloquent\Model;
 
 class Project extends Model
 {
-    protected $fillable = ['name'];
+    protected $table = 'master_projects';
+    protected $fillable = ['name', 'kode', 'kategori_id', 'bobot', 'target', 'anggaran', 'waktu', 'tipe', 'pic', 'no_hp', 'email'];
 
-    public function tahapans()
+    public function kategori()
     {
-        return $this->hasMany(Tahapan::class);
+        return $this->belongsTo(Kategori::class);
+    }
+
+    public function detailProjects()
+    {
+        return $this->hasMany(DetailProject::class);
+    }
+
+    public function subTahapans()
+    {
+        return $this->hasMany(SubTahapan::class);
     }
 }

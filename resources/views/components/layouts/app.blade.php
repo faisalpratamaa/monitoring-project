@@ -85,8 +85,16 @@
                 {{-- ✅ Master Data hanya untuk role 1 dan 2 --}}
                 @if (in_array(auth()->user()->role_id, [1, 2]))
                     <x-menu-sub title="Master Data" icon="fas.database">
+                        <x-menu-item title="Kategori" icon="fas.archive" link="/kategoris" />
                         <x-menu-item title="Project" icon="fas.archive" link="/projects" />
                         <x-menu-item title="Tahapan" icon="fas.box" link="/tahapans" />
+                    </x-menu-sub>
+                @endif
+
+                {{-- ✅ Master Data hanya untuk role 1, 2 dan 3 --}}
+                @if (in_array(auth()->user()->role_id, [1, 2, 3]))
+                    <x-menu-sub title="Tracking" icon="fas.tasks">
+                        <x-menu-item title="Progress" icon="fas.chart-simple" link="/progress" />
                     </x-menu-sub>
                 @endif
 

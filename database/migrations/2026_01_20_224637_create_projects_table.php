@@ -22,7 +22,7 @@ return new class extends Migration
             $table->enum('waktu', ['TW 1', 'TW 2', 'TW 3', 'TW 4']);
             $table->enum('tipe', ['New', 'Carry Over']);
             $table->string('pic');
-            $table->string('hp');
+            $table->string('no_hp');
             $table->string('email');
             $table->timestamps();
         });
